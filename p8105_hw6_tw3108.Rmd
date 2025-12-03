@@ -9,10 +9,18 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r,warning=FALSE,message=FALSE}
 library(tidyverse)
 library(broom)
 library(readr)
 data <- read_csv("data/homicide-data.csv")
-
+new = data %>% 
+  mutate(
+   city_state = str_c(city, state, sep = ", "),
+   solved = if_else(disposition == "Closed by arrest", 1, 0),
+   victim_age = as.numeric(victim_age)
+  ) %>% 
+  filter(!city_state %in% c("Dallas, TX","Phoenix, AZ","Kansas City, MO","Tulsa, AL")
+  ) %>% 
+  filter(victim_race %in% c("White", "Black"))
 ```
