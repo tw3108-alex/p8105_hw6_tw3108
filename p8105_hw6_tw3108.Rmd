@@ -2,7 +2,7 @@
 title: "p8105_tw3108_hw6"
 author: "Tao Wu"
 date: "2025-12-03"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -68,9 +68,11 @@ cityplot = cityor %>%
   )
 cityplot
 ```
+
 Problem1: 
 In most cities, the or is close to 1, indicating that in most cases the clearance rate for male victims is similar to female victims.
 A few cities show higher or estimates, but with much wide CI, suggesting that these cities have small sample sizes or limited number of clearances. Overall, there is not enough evidence in most cities to show a significant difference in clearance rates between male and female victims.
+
 ```{r, message=FALSE,warning=FALSE}
 library(p8105.datasets)
 library(tidyverse)
@@ -158,10 +160,48 @@ birthres <- birthclean %>%
 ggplot(birthres, aes(x = pred, y = resid)) +
   geom_point() +
   labs(
-    x = "Birthweight",
-    y = "Residuals",
-    title = "Residuals for model"
-  ) +
-  theme_minimal()
+    x = "birthweight",
+    y = "residuals",
+    title = "residuals for model"
+  )
+model1 <- lm(bwt ~ blength + gaweeks, data = birthclean)
+model2 <- lm(bwt ~ bhead + blength + babysex + bhead:blength + bhead:babysex +blength:babysex + bhead:blength:babysex,data = birthclean)
+cv_df =
+  crossv_mc(birthclean, 100) %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test  = map(test, as_tibble)
+  )
+cv_df =
+  cv_df %>%
+  mutate( my_model = map(train, \(df) lm(bwt ~ blength + gaweeks + bhead + babysex + mrace + ppbmi + smoken + wtgain + momage + parity,data = df)),
+          
+    model1 = map(train,\(df) lm(bwt ~ blength + gaweeks, data = df)),
+    
+    model2 = map(train, \(df) lm(bwt ~ bhead + blength + babysex + bhead:blength + bhead:babysex + blength:babysex + bhead:blength:babysex,data = df) )
+  )
+cv_df =
+  cv_df %>%
+  mutate(
+    rmse_my = map2_dbl(my_model, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_len  = map2_dbl(model1,   test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_bigint  = map2_dbl(model2,   test, \(mod, df) rmse(model = mod, data = df))
+  )
+cv_df %>% 
+  select(starts_with("rmse")) %>%
+  pivot_longer(
+    everything(),
+    names_to = "model",
+    values_to = "rmse",
+    names_prefix = "rmse_"
+  ) %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+  labs(
+    x = "model",
+    y = "rmse",
+    title = "cv error for models"
+  )
 ```
+
 From the various variables in this dataset,I selected those I believed were most likely to influence bwt. I thought it would be simpler and more intuitive to exclude interaction terms when comparing with the two models below, so I chose the above ten variables for model building. Several of these have relatively direct effects, such as body size, nutrition, or maternal condition; next are gender and smoking, which I think are very likely; and finally, three that I was curious about.
