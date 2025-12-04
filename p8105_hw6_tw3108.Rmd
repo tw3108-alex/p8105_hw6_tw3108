@@ -135,3 +135,33 @@ bootci = result %>%
   )
 bootci
 ```
+```{r,message=FALSE,warning=FALSE}
+library(readr)
+library(tidyverse)
+library(modelr) 
+birth <- read_csv("data/birthweight.csv")
+glimpse(birth)
+birthclean <- birth %>%
+  mutate(  babysex = factor(babysex, levels = c(1, 2), labels = c("male", "female")),
+           
+    mrace = factor(mrace, levels = c(1, 2, 3, 4, 8),labels = c("White", "Black", "Asian", "PuertoRican", "Other")),
+    
+    frace = factor(frace, levels = c(1, 2, 3, 4, 8, 9), labels = c("White", "Black", "Asian","PuertoRican", "Other", "Unknown")),
+    
+    malform = factor(malform,levels = c(0, 1), labels = c("absent", "present"))
+  )
+model <- lm(bwt ~ blength + gaweeks + bhead + babysex + mrace + ppbmi + smoken + wtgain + momage + parity, data = birthclean)
+summary(model)
+birthres <- birthclean %>%
+  add_predictions(model) %>%
+  add_residuals(model)
+ggplot(birthres, aes(x = pred, y = resid)) +
+  geom_point() +
+  labs(
+    x = "Birthweight",
+    y = "Residuals",
+    title = "Residuals for model"
+  ) +
+  theme_minimal()
+```
+From the various variables in this dataset,I selected those I believed were most likely to influence bwt. I thought it would be simpler and more intuitive to exclude interaction terms when comparing with the two models below, so I chose the above ten variables for model building. Several of these have relatively direct effects, such as body size, nutrition, or maternal condition; next are gender and smoking, which I think are very likely; and finally, three that I was curious about.
