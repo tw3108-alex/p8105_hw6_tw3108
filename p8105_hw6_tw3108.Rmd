@@ -17,10 +17,43 @@ data <- read_csv("data/homicide-data.csv")
 new = data %>% 
   mutate(
    city_state = str_c(city, state, sep = ", "),
-   solved = if_else(disposition == "Closed by arrest", 1, 0),
+   check = if_else(disposition == "Closed by arrest", 1, 0),
    victim_age = as.numeric(victim_age)
   ) %>% 
   filter(!city_state %in% c("Dallas, TX","Phoenix, AZ","Kansas City, MO","Tulsa, AL")
   ) %>% 
   filter(victim_race %in% c("White", "Black"))
+baltimore = new %>% 
+  filter(city_state == "Baltimore, MD")
+model = glm(check ~ victim_age + victim_sex + victim_race, data = baltimore, family = binomial()
+ )
+tidymodel = broom::tidy(model)
+or = tidymodel %>%
+  filter(term == "victim_sexMale") %>%
+  mutate(
+    or = exp(estimate),
+    conf.low = exp(estimate - 1.96 * std.error),
+    conf.high= exp(estimate + 1.96 * std.error)
+  ) %>%
+  select(term, or, conf.low, conf.high)
+or
+cityor = new %>% 
+  group_by(city_state) %>% 
+  nest() %>% 
+  mutate(
+    model = map(data, ~ glm( check ~ victim_age + victim_sex + victim_race, data = .x, family = binomial()
+  )
+  ),
+    result = map(model, ~ broom::tidy(.x))
+  ) %>% 
+  unnest(result) %>% 
+  filter(term == "victim_sexMale") %>% 
+  mutate(
+    or       = exp(estimate),
+    conf.low = exp(estimate - 1.96 * std.error),
+    conf.high= exp(estimate + 1.96 * std.error)
+  ) %>% 
+  select(city_state, or, conf.low, conf.high) %>% 
+  ungroup()
+cityor
 ```
