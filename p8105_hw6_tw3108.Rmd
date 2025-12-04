@@ -87,15 +87,15 @@ boot = weather_df %>%
     tidydata   = map(model, \(m) broom::tidy(m))
   )
 boot
-rsqdata = model1 |>
-  select(.id, glancedata) |>
-  unnest(glancedata) |>
+rsqdata = model1 %>%
+  select(.id, glancedata) %>%
+  unnest(glancedata) %>%
   select(.id, r.squared)
 rsqdata
-betaratio = model1 |>
-  select(.id, tidydata) |>
-  unnest(tidydata) |>
-  group_by(.id) |>
+betaratio = model1 %>%
+  select(.id, tidydata) %>%
+  unnest(tidydata) %>%
+  group_by(.id) %>%
   summarize(
       ratio = { 
       b1 = estimate[term == "tmin"] 
@@ -103,7 +103,35 @@ betaratio = model1 |>
       b1 / b2               
     }
   )
-result = rsqdata |>
+result = rsqdata %>%
   inner_join(betaratio, by = ".id")
 result
+rsqplot = result %>%
+  ggplot(aes(x = r.squared)) +
+  geom_histogram(bins = 30, fill = "blue") +
+  labs(
+    title = "Bootstrap R²",
+    x = expression(R^2),
+    y = "Count"
+  ) +
+  theme_minimal()
+rsqplot
+betaplot = result %>%
+  ggplot(aes(x = ratio)) +
+  geom_histogram(bins = 30, fill = "black") +
+  labs(
+    title = "Bootstrap betaratio",
+    x = expression(beta[1] / beta[2]),
+    y = "Count"
+  ) +
+  theme_minimal()
+betaplot
+bootci = result %>%
+  summarize(
+    rsqlow   = quantile(r.squared, 0.025),
+    rsqhigh  = quantile(r.squared, 0.975),
+    ratiolow = quantile(ratio, 0.025),
+    ratiohigh= quantile(ratio, 0.975)
+  )
+bootci
 ```
