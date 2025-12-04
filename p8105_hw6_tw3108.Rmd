@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(broom)
 library(readr)
+library(ggplot2)
 data <- read_csv("data/homicide-data.csv")
 new = data %>% 
   mutate(
@@ -56,4 +57,19 @@ cityor = new %>%
   select(city_state, or, conf.low, conf.high) %>% 
   ungroup()
 cityor
+cityplot = cityor %>% 
+  ggplot(aes(x = or, y = reorder(city_state, or))) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high)) +
+  labs(
+    x = "or for homocide",
+    y = "City & State",
+    title = "adjusted or"
+  )
+cityplot
+```
+Problem1: 
+In most cities, the or is close to 1, indicating that in most cases the clearance rate for male victims is similar to female victims.
+A few cities show higher or estimates, but with much wide CI, suggesting that these cities have small sample sizes or limited number of clearances. Overall, there is not enough evidence in most cities to show a significant difference in clearance rates between male and female victims.
+```{r, message=FALSE,warning=FALSE}
 ```
