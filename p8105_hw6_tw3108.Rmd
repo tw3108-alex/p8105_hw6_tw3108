@@ -72,4 +72,38 @@ Problem1:
 In most cities, the or is close to 1, indicating that in most cases the clearance rate for male victims is similar to female victims.
 A few cities show higher or estimates, but with much wide CI, suggesting that these cities have small sample sizes or limited number of clearances. Overall, there is not enough evidence in most cities to show a significant difference in clearance rates between male and female victims.
 ```{r, message=FALSE,warning=FALSE}
+library(p8105.datasets)
+library(tidyverse)
+library(modelr)
+library(broom)
+data("weather_df")
+set.seed(1234)
+boot = weather_df %>%
+  modelr::bootstrap(n = 5000)
+  model1 = boot %>%
+  mutate(
+    model = map(strap, \(df) lm(tmax ~ tmin + prcp, data = df)),
+    glancedata = map(model, \(m) broom::glance(m)),
+    tidydata   = map(model, \(m) broom::tidy(m))
+  )
+boot
+rsqdata = model1 |>
+  select(.id, glancedata) |>
+  unnest(glancedata) |>
+  select(.id, r.squared)
+rsqdata
+betaratio = model1 |>
+  select(.id, tidydata) |>
+  unnest(tidydata) |>
+  group_by(.id) |>
+  summarize(
+      ratio = { 
+      b1 = estimate[term == "tmin"] 
+      b2 = estimate[term == "prcp"]   
+      b1 / b2               
+    }
+  )
+result = rsqdata |>
+  inner_join(betaratio, by = ".id")
+result
 ```
